@@ -108,6 +108,7 @@ public class NBHMSerializationTest
         else
             cloned = ((NonBlockingHashMapLong<Object>) map).clone();
         assertEquals(map.getClass(), cloned.getClass());
+        // Keep the primitive dispatch used before this change, including for subclasses.
         if (map instanceof RemovingHashMapLong)
             assertEquals("Cloning must retain the primitive put overload",
                 boxedPuts,
@@ -127,6 +128,8 @@ public class NBHMSerializationTest
 
     private void assertMappings(Map<?, ?> actual, boolean shallowClone)
     {
+        // Removal cases intentionally pin reuse of the prefetched entry. A general
+        // weakly consistent result could omit it, but that is not this snapshot strategy.
         assertEquals(expected.size(), actual.size());
         for (Map.Entry<Long, Object> wanted : expected.entrySet())
         {
@@ -204,12 +207,14 @@ public class NBHMSerializationTest
 
             public Iterator<T> iterator()
             {
+                // This fixture intentionally pins clone/writeObject's entrySet traversal.
+                // An implementation that bypasses that view needs a different removal hook.
                 // Use the real map iterator, whose constructor prefetches a value.
                 // A single mapping (or key zero, always first) makes the window
                 // independent of hashing, table size, scheduling and iteration order.
                 Iterator<T> iterator = entries.iterator();
                 removal.afterPrefetch(owner, iterator);
-                // In particular, preserve IteratorLong for the old keySetLong path.
+                // Keep IteratorLong intact when this test is run against the pre-fix clone.
                 return iterator;
             }
         };

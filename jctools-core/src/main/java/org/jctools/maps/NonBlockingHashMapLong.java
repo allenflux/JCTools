@@ -1626,7 +1626,7 @@ public class NonBlockingHashMapLong<TypeV>
             //
             // Wipe out the cloned array (it was shallow anyways).
             t.clear();
-            // Now copy sanely
+            // Unbox keys to keep the primitive put overload used by the old keySetLong loop.
             for (Map.Entry<Long, TypeV> entry : entrySet())
                 t.put(entry.getKey().longValue(), entry.getValue());
             return t;
